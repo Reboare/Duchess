@@ -40,10 +40,6 @@ source = Source <$> convertToSrc <$> (choice $ map asciiCI ["r5", "bluray","bdri
                                                             "VHS", "Screener",  "WEB-DL"])
 
 codec :: Parser MediaType
---TODO
---FIX THIS IT DOESN'T CURRENTLY WORK
---Note excessively worried about this
---It's mostly filler but It's still worrying
 codec = Codec <$> convertToCdc <$> (choice $ map asciiCI ["xvid", "x264", "h264", "divx", 
                                          "AVC", "VC-1"])
 
@@ -73,7 +69,7 @@ pEpisode = do
 
 title :: Parser MediaType
 title = do
-    x <- manyTill anyChar $ choice [year, resolution, part, codec, pEpisode, pSeason]
+    x <- manyTill anyChar $ choice [year, resolution, part, codec, source,  pEpisode, pSeason]
     return $! Title $! format $ T.pack x
     where
         format :: T.Text -> T.Text
@@ -108,18 +104,22 @@ mainParse toParse =
 
 convertToSrc :: T.Text -> SourceDer
 convertToSrc name 
-    | name `elem` ["BDRip", "BRRip", "BluRay"] = BD 
-    | name == "HDDVD" = HDDVD
-    | name == "HDTV" = HDTV
-    | name == "DVDRip" = DVD
-    | name == "VHS" = VHS
-    | name `elem` ["Screener", "R5"] =  PRE
-    | name == "WEB-DL" = WEBDL
+    | nameU `elem` ["BDRIP", "BRRIP", "BLURAY"] = BD 
+    | nameU == "HDDVD" = HDDVD
+    | nameU == "HDTV" = HDTV
+    | nameU == "DVDRIP" = DVD
+    | nameU == "VHS" = VHS
+    | nameU `elem` ["SCREENER", "R5"] =  PRE
+    | nameU == "WEB-DL" = WEBDL
+    where
+        nameU = T.toUpper name
 
 convertToCdc :: T.Text -> CodecDer
 convertToCdc name 
-    | name `elem` ["x264", "h264", "AVC"] = H264
-    | name `elem` ["divx", "xvid"] = XVID
-    | name == "VC-1" = VC1
+    | nameU `elem` ["X264", "H264", "AVC"] = H264
+    | nameU `elem` ["DIVX", "XVID"] = XVID
+    | nameU == "VC-1" = VC1
+    where
+        nameU = T.toUpper name
 
 

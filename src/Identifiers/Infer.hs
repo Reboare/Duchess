@@ -7,9 +7,6 @@ module Identifiers.Infer
 )
 where
 
---TODO
---Change the api to allow returning of 
-
 import System.FilePath
 import Data.Maybe
 import Data.List
@@ -21,16 +18,21 @@ import Base.Types
 
 
 infer :: FilePath -> Media
--- |Constructor for a movie type from a filename
+-- |Constructor for a Media Type from a filename
 infer filepath = 
     case isEpisode(attrs) of
         True -> Episode attrs
         False -> Movie attrs
     where
         filename :: T.Text
-        filename = T.pack $! takeBaseName filepath
+        filename = T.pack $! filepath
+        -- Removed takeBaseNamein the case of folders
+        -- I'll Let the Caller take car of that part
+        -- Better to keep this independent of the filesystem
         attrs :: [MediaType]
         attrs = mainParse filename
+--Note: Support for multi-part mkv's might be supported
+--MIGHT BE!
 
 isEpisode :: [MediaType] -> Bool
 isEpisode xs = 
