@@ -19,5 +19,7 @@ genFind nm sName = do
     let genFunName = mkName sName --The main function name 
     let eq = mkName $! "eq" ++ nameBase nm --An Equality function
     xs <- newName "xs"
+    extr <- newName "extr"
+    a <- newName "a"
     return [FunD eq [Clause [ConP nm [WildP]] (NormalB (ConE 'True)) [],Clause [WildP] (NormalB (ConE 'False)) []],
-            FunD genFunName [Clause [VarP xs] (NormalB (AppE (AppE (VarE 'find) (VarE eq)) (VarE xs))) []]]
+            FunD genFunName [Clause [VarP xs] (NormalB (AppE (VarE extr) (AppE (AppE (VarE 'find) (VarE eq)) (VarE xs)))) [FunD extr [Clause [ConP 'Just [ConP nm [VarP a]]] (NormalB (AppE (ConE 'Just) (VarE a))) [],Clause [ConP 'Nothing []] (NormalB (ConE 'Nothing)) []]]]]
