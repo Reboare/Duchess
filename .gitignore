@@ -6,3 +6,4 @@ debug
 *.chi
 *.chs.h
 .virthualenv
+*.bat
