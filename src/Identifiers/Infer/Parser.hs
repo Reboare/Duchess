@@ -37,7 +37,7 @@ attribute = do
 source :: Parser MediaType
 source = Source <$> convertToSrc <$> (choice $ map asciiCI ["r5", "bluray","bdrip", "BRRip", 
                                                             "HDDVD", "HDTV", "DVDRip", 
-                                                            "VHS", "Screener",  "WEB-DL"])
+                                                            "VHS", "Screener",  "WEB-DL", "NTSC"])
 
 codec :: Parser MediaType
 codec = Codec <$> convertToCdc <$> (choice $ map asciiCI ["xvid", "x264", "h264", "divx", 
@@ -58,6 +58,7 @@ part = do string "cd"
 pSeason :: Parser MediaType
 pSeason = do
     char 'S'
+    --Slow.  Change to takeWhile1
     x <- many1 digit
     return $! SeasonNo (read x :: Int)
 
@@ -107,7 +108,7 @@ convertToSrc name
     | nameU `elem` ["BDRIP", "BRRIP", "BLURAY"] = BD 
     | nameU == "HDDVD" = HDDVD
     | nameU == "HDTV" = HDTV
-    | nameU == "DVDRIP" = DVD
+    | nameU `elem` ["DVDRIP", "NTSC", "PAL"] = DVD
     | nameU == "VHS" = VHS
     | nameU `elem` ["SCREENER", "R5"] =  PRE
     | nameU == "WEB-DL" = WEBDL
@@ -121,5 +122,3 @@ convertToCdc name
     | nameU == "VC-1" = VC1
     where
         nameU = T.toUpper name
-
-
