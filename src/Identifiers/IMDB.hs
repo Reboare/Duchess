@@ -1,8 +1,14 @@
 {-#LANGUAGE OverloadedStrings#-}
-module Identifiers.IMDB where
+module Identifiers.IMDB 
+(
+    search,
+    fromSearch,
+    getTitle
+)
+where
 import           Base.HTTP
 import           Data.Aeson
---import qualified Data.Aeson.Generic as G
+import Base.Types (ToMediaType(..), Media(..), MediaType(..), Actor(..))
 import qualified Data.Text as T
 import Control.Monad
 import Control.Applicative
@@ -10,24 +16,42 @@ import Data.Data
 import Data.Typeable
 import Data.List.Split
 
+
+
 data TitleResult = TitleResult {
-                title :: T.Text,
-                year :: T.Text,
-                rated :: T.Text,
-                released :: T.Text,
-                runtime :: T.Text,
+                title :: T.Text, --Movie Title
+                year :: T.Text, --Year Movie was Released
+                rated :: T.Text, --The Age Rating
+                released :: T.Text, --The Full Release Date
+                runtime :: T.Text, 
                 genre :: T.Text,
                 director :: T.Text,
                 writer :: T.Text,
                 actors :: T.Text,
                 plot :: T.Text,
-                poster :: T.Text,
+                poster :: T.Text, --Url to Poster
                 imdbRating :: T.Text,
                 imdbVotes :: T.Text,
                 imdbID :: T.Text,
                 oType :: T.Text,
                 response :: T.Text}
                 deriving (Eq, Show)
+
+instance ToMediaType TitleResult  where
+    toMedia xs = constr [cTitle, cYear,cActors, cPlot, cID, cRat]
+        where
+            cTitle = Title $! title xs
+            cYear = Year $! (read (T.unpack $! year xs):: Int)
+            cRuntime = Runtime $! (read (T.unpack $! runtime xs):: Int)
+            cActors = Actors $! map Actor $! map (T.strip) (T.splitOn "," $! actors xs)
+            cPlot = Synopsis $! plot xs
+            cID = IMDBid $! (read (drop 2 $! T.unpack $! imdbID xs):: Int)
+            cRat = IMDBRating $! (read (T.unpack $! imdbRating xs):: Float)
+            constr = case oType xs of
+                        "movie" -> Movie
+                        "episode" -> Episode 
+                        "series" -> Episode
+
 
 data SearchResult = SearchResult {
                 sTitle :: T.Text,
@@ -71,8 +95,10 @@ search title year = do
     doc <- getHTML $! "http://www.omdbapi.com/?s=" ++ t ++ y
     return $! unSObject <$> (decode doc :: Maybe SearchObject)
 
+fromSearch :: SearchResult -> IO (Maybe Media)
+fromSearch (SearchResult ttl yr idb _) = getTitle ttl (Just $!(read (T.unpack yr) :: Int)) (Just idb)
 
-getTitle :: T.Text -> Maybe Int -> Maybe T.Text -> IO (Maybe TitleResult)
+getTitle :: T.Text -> Maybe Int -> Maybe T.Text -> IO (Maybe Media)
 getTitle theTitle theYear theIMDBid = do
     let y = case theYear of
                 Just a -> "&y="++(show a)
@@ -82,4 +108,4 @@ getTitle theTitle theYear theIMDBid = do
                 Just a -> "&i="++(show a)
                 Nothing -> ""
     doc <- getHTML $! "http://www.omdbapi.com/?t=" ++ t ++ y ++ idb
-    return (decode doc :: Maybe TitleResult)
+    return $! toMedia <$> (decode doc :: Maybe TitleResult)

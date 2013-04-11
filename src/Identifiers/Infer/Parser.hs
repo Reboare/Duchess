@@ -5,7 +5,7 @@ module Identifiers.Infer.Parser
 )
 where
 
-import Base.Types (MediaType(..), SourceDer(..), CodecDer(..), ResolutionDer(..), strToSignal)
+import Base.Types (MediaType(..), SourceDer(..), CodecDer(..), ResolutionDer(..), strToSignal, UniqType(..))
 import Data.Attoparsec.Text
 import qualified Data.Attoparsec as A
 import qualified Data.Text as T
@@ -13,6 +13,7 @@ import Control.Applicative
 import Data.Char
 import Data.Maybe
 import Data.List
+
 
 --TODO
 --Add a filter for attributes of the form "[attr]"
@@ -26,7 +27,7 @@ attribute = do
     return ()
 
 seperators :: [Char]
-seperators = ". _[]"
+seperators = ". _[]()"
 
 year :: Parser MediaType
 year =  do
@@ -72,8 +73,9 @@ pEpisode = do
 title :: Parser MediaType
 title = do
     skipMany attribute
+    y <- anyChar --Must apply this at least once e.g. in the case of 2001 A Space Odyssey
     x <- manyTill anyChar $ choice [year, resolution, part, codec, source,  pEpisode, pSeason]
-    return $! Title $! format $ T.pack x
+    return $! Title $! format $ T.pack (y:x)
     where
         format :: T.Text -> T.Text
         format title = T.strip $! T.unwords $! T.split (flip elem seperators) title
@@ -95,7 +97,8 @@ mainParse toParse =
         --end of file won't work here.  Since leftover data in the Done constructor
         --isn't used later that means we can feed whatever we like and it can be safely ignored.
         titulo :: MediaType
-        titulo = fromJust.maybeResult $! feed (parse title toParse) "1984"
+        titulo = fromJust.maybeResult $! feed (parse title toParse) ".1984.1984" --No idea what's going on here tbh
+        --TODO WORK OUT WHY THE HELL THIS DOESN'T WORK
         otherVals :: [MediaType]
         otherVals = listFromJust.maybeResult $ feed (parse (many choices) toParse) ""
         listFromJust :: Maybe [MediaType] -> [MediaType]
@@ -103,7 +106,7 @@ mainParse toParse =
             (Just a) -> a
             Nothing -> [] 
     in 
-        sort (titulo:otherVals)
+        nubBy dup $! sort (titulo:otherVals)
 
 convertToSrc :: T.Text -> SourceDer
 convertToSrc name 
