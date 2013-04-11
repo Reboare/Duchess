@@ -18,21 +18,22 @@ import Data.List
 --Add a filter for attributes of the form "[attr]"
 --They're unstandardised in pretty much anny community so best job would be
 --a preprocessor that chucks em out the window
+attribute :: Parser ()
+attribute = do
+    char '['
+    res <- takeWhile1 (']' /=)
+    char ']'
+    return ()
 
 seperators :: [Char]
-seperators = ". _"
+seperators = ". _[]"
 
 year :: Parser MediaType
 year =  do
     year <- count 4 digit
     return (Year $! (read year :: Int))
 
-attribute :: Parser T.Text
-attribute = do
-    char '['
-    res <- takeWhile1 (']' /=)
-    char ']'
-    return res
+
 
 source :: Parser MediaType
 source = Source <$> convertToSrc <$> (choice $ map asciiCI ["r5", "bluray","bdrip", "BRRip", 
@@ -70,6 +71,7 @@ pEpisode = do
 
 title :: Parser MediaType
 title = do
+    skipMany attribute
     x <- manyTill anyChar $ choice [year, resolution, part, codec, source,  pEpisode, pSeason]
     return $! Title $! format $ T.pack x
     where
