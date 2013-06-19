@@ -1,4 +1,6 @@
-#Infer
+Infer
+=============
+
 A movie title reader based on the combinator parser library attoparsec.
 An example of it's capabilities is shown below.
 

@@ -1,70 +1,55 @@
-{-#LANGUAGE OverloadedStrings#-}
-module Identifiers.IMDB 
+{-# LANGUAGE OverloadedStrings #-}
+module Identifiers.IMDB
 (
     search,
-    fromSearch,
-    getTitle
+    sResultUpdateNMedia,
+    tResultUpdateNMedia
 )
 where
+
 import           Base.HTTP
+import           Base.Types
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
 import           Data.Aeson
-import Base.Types (ToMediaType(..), Media(..), MediaType(..), Actor(..))
-import qualified Data.Text as T
-import Control.Monad
-import Control.Applicative
-import Data.Data
-import Data.Typeable
-import Data.List.Split
-
-
+import           Data.Data
+import           Data.List.Split
+import           Data.Maybe
+import qualified Data.Text           as T
+import           Data.Typeable
 
 data TitleResult = TitleResult {
-                title :: T.Text, --Movie Title
-                year :: T.Text, --Year Movie was Released
-                rated :: T.Text, --The Age Rating
-                released :: T.Text, --The Full Release Date
-                runtime :: T.Text, 
-                genre :: T.Text,
-                director :: T.Text,
-                writer :: T.Text,
-                actors :: T.Text,
-                plot :: T.Text,
-                poster :: T.Text, --Url to Poster
-                imdbRating :: T.Text,
-                imdbVotes :: T.Text,
-                imdbID :: T.Text,
-                oType :: T.Text,
-                response :: T.Text}
+                ttitle      :: T.Text, --Movie Title
+                tyear       :: T.Text, --Year Movie was Released
+                trated      :: T.Text, --The Age Rating
+                treleased   :: T.Text, --The Full Release Date
+                truntime    :: T.Text,
+                tgenre      :: T.Text,
+                tdirector   :: T.Text,
+                twriter     :: T.Text,
+                tactors     :: T.Text,
+                tplot       :: T.Text,
+                tposter     :: T.Text, --Url to Poster
+                timdbRating :: T.Text,
+                timdbVotes  :: T.Text,
+                timdbID     :: T.Text,
+                toType      :: T.Text,
+                tresponse   :: T.Text}
                 deriving (Eq, Show)
 
-instance ToMediaType TitleResult  where
-    toMedia xs = constr [cTitle, cYear,cActors, cPlot, cID, cRat]
-        where
-            cTitle = Title $! title xs
-            cYear = Year $! (read (T.unpack $! year xs):: Int)
-            cRuntime = Runtime $! (read (T.unpack $! runtime xs):: Int)
-            cActors = Actors $! map Actor $! map (T.strip) (T.splitOn "," $! actors xs)
-            cPlot = Synopsis $! plot xs
-            cID = IMDBid $! (read (drop 2 $! T.unpack $! imdbID xs):: Int)
-            cRat = IMDBRating $! (read (T.unpack $! imdbRating xs):: Float)
-            constr = case oType xs of
-                        "movie" -> Movie
-                        "episode" -> Episode 
-                        "series" -> Episode
-
-
 data SearchResult = SearchResult {
-                sTitle :: T.Text,
-                sYear :: T.Text,
+                sTitle  :: T.Text,
+                sYear   :: T.Text,
                 sImdbID :: T.Text,
-                sOType :: T.Text} 
+                sOType  :: T.Text}
                 deriving (Eq, Show)
 
 newtype SearchObject = SearchObject {unSObject :: [SearchResult]} deriving (Eq, Show)
 
 instance FromJSON SearchObject where
     parseJSON (Object v) = SearchObject <$>
-                            v .: "Search" 
+                            v .: "Search"
     parseJSON _          = mzero
 
 instance FromJSON TitleResult where
@@ -86,26 +71,25 @@ instance FromJSON SearchResult where
                             v .: "Type"
     parseJSON _          = mzero
 
-search :: T.Text -> Maybe Int -> IO (Maybe [SearchResult])
-search title year = do
+search :: T.Text -> Maybe Int -> MaybeIO [SearchResult]
+search title year = MaybeT $! do
     let y = case year of
-                Just a -> "&y="++(show a)
+                Just a -> "&y=" ++ show a
                 Nothing -> ""
     let t = T.unpack $! T.intercalate "%20" (T.splitOn " " title)
     doc <- getHTML $! "http://www.omdbapi.com/?s=" ++ t ++ y
-    return $! unSObject <$> (decode doc :: Maybe SearchObject)
+    return  (unSObject <$> (decode doc :: Maybe SearchObject))
 
-fromSearch :: SearchResult -> IO (Maybe Media)
-fromSearch (SearchResult ttl yr idb _) = getTitle ttl (Just $!(read (T.unpack yr) :: Int)) (Just idb)
 
-getTitle :: T.Text -> Maybe Int -> Maybe T.Text -> IO (Maybe Media)
-getTitle theTitle theYear theIMDBid = do
-    let y = case theYear of
-                Just a -> "&y="++(show a)
-                Nothing -> ""
-    let t = T.unpack $! T.intercalate "%20" (T.splitOn " " theTitle)
-    let idb = case theIMDBid of
-                Just a -> "&i="++(show a)
-                Nothing -> ""
-    doc <- getHTML $! "http://www.omdbapi.com/?t=" ++ t ++ y ++ idb
-    return $! toMedia <$> (decode doc :: Maybe TitleResult)
+sResultUpdateNMedia :: NMedia -> SearchResult -> NMedia
+sResultUpdateNMedia nMedia sres =
+    (setImdb (sImdbID sres)) $!
+    (setYear (sYear sres)) $!
+    (setTitle (sTitle sres) nMedia)
+    where
+        setTitle = set title
+        setYear val = set year (Just (read (T.unpack val) :: Int))
+        setImdb val = set imdbid (Just (read (T.unpack val) :: Int))
+
+tResultUpdateNMedia :: NMedia -> TitleResult -> NMedia
+tResultUpdateNMedia = undefined

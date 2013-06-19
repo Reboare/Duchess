@@ -1,18 +1,58 @@
-{-#LANGUAGE OverloadedStrings#-}
-module Identifiers.Infer.Parser 
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+module Identifiers.Infer.Parser
 (
-    mainParse
+    mainParse,
+    genFind,
+    MediaType(..),
+    Media(..)
 )
 where
 
-import Base.Types (MediaType(..), SourceDer(..), CodecDer(..), ResolutionDer(..), strToSignal, UniqType(..))
-import Data.Attoparsec.Text
-import qualified Data.Attoparsec as A
-import qualified Data.Text as T
-import Control.Applicative
-import Data.Char
-import Data.Maybe
-import Data.List
+import           Base.Types           (Actor (..), CodecDer (..),
+                                       ResolutionDer (..), SourceDer (..), Url,
+                                       strToSignal)
+import           Control.Applicative
+import qualified Data.Attoparsec      as A
+import           Data.Attoparsec.Text
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import qualified Data.Text            as T
+import           Language.Haskell.TH
+
+data MediaType =  Title T.Text
+                | Year Int
+                | Resolution ResolutionDer
+                | Source SourceDer
+                | Codec CodecDer
+                | Part Int
+                | Runtime Int
+                | IMDBid Int
+                | IMDBRating Float
+                | Synopsis T.Text
+                | Actors [Actor]
+                | EpisodeNo Int
+                | SeasonNo Int
+                | Poster (Either Url FilePath) -- On the left, we need to fetch it.  On the right, it's been fetched.
+                deriving (Eq, Show, Ord)
+
+genFind :: Name -> String -> Q [Dec]
+genFind nm sName = do
+    let genFunName = mkName sName --The main function name
+    let eq = mkName $! "eq" ++ nameBase nm --An Equality function
+    xs <- newName "xs"
+    extr <- newName "extr"
+    a <- newName "a"
+
+    return [FunD eq [Clause [ConP nm [WildP]] (NormalB (ConE 'True)) [],Clause [WildP] (NormalB (ConE 'False)) []],
+            FunD genFunName [Clause [ConP 'Movie [VarP xs]] (NormalB (AppE (VarE extr) (AppE (AppE (VarE 'find) (VarE eq)) (VarE xs)))) [FunD extr [Clause [ConP 'Just [ConP nm [VarP a]]] (NormalB (AppE (ConE 'Just) (VarE a))) [],Clause [ConP 'Nothing []] (NormalB (ConE 'Nothing)) []]],
+                             Clause [ConP 'Episode [VarP xs]] (NormalB (AppE (VarE extr) (AppE (AppE (VarE 'find) (VarE eq)) (VarE xs)))) [FunD extr [Clause [ConP 'Just [ConP nm [VarP a]]] (NormalB (AppE (ConE 'Just) (VarE a))) [],Clause [ConP 'Nothing []] (NormalB (ConE 'Nothing)) []]]]]
+
+
+data Media = Movie {fromMovie::[MediaType]}
+            |Episode {fromEpisode:: [MediaType]}
+            deriving (Eq, Show)
 
 
 --TODO
@@ -26,7 +66,7 @@ attribute = do
     char ']'
     return ()
 
-seperators :: [Char]
+seperators :: String
 seperators = ". _[]()"
 
 year :: Parser MediaType
@@ -37,23 +77,23 @@ year =  do
 
 
 source :: Parser MediaType
-source = Source <$> convertToSrc <$> (choice $ map asciiCI ["r5", "bluray","bdrip", "BRRip", 
-                                                            "HDDVD", "HDTV", "DVDRip", 
+source = Source <$> convertToSrc <$> choice  (map asciiCI ["r5", "bluray","bdrip", "BRRip",
+                                                            "HDDVD", "HDTV", "DVDRip",
                                                             "VHS", "Screener",  "WEB-DL", "NTSC"])
 
 codec :: Parser MediaType
-codec = Codec <$> convertToCdc <$> (choice $ map asciiCI ["xvid", "x264", "h264", "divx", 
+codec = Codec <$> convertToCdc <$> choice (map asciiCI ["xvid", "x264", "h264", "divx",
                                          "AVC", "VC-1"])
 
 resolution :: Parser MediaType
 resolution = do
-            res <- T.pack <$> (many1 digit)
-            inc <- (char 'p' <|> char 'i')
+            res <- T.pack <$> many1 digit
+            inc <- char 'p' <|> char 'i'
             return $! Resolution $! ResolutionDer (read (T.unpack res) :: Int) (strToSignal inc)
 
 part :: Parser MediaType
 -- | Why does this only return a partial?  WTF is going on
-part = do string "cd" 
+part = do string "cd"
           d <- digit
           return $! Part (read [d] :: Int)
 
@@ -90,8 +130,8 @@ choices :: Parser MediaType
 choices = anyTill anyChar $! choice [codec, year, resolution, part, source, pEpisode, pSeason]
 
 mainParse :: T.Text -> [MediaType]
-mainParse toParse = 
-    let 
+mainParse toParse =
+    let
         --If we don't match anything other than title we get a partial
         --This is very hacky but since <|> only accepts parsers of equal type.
         --end of file won't work here.  Since leftover data in the Done constructor
@@ -104,13 +144,13 @@ mainParse toParse =
         listFromJust :: Maybe [MediaType] -> [MediaType]
         listFromJust x = case x of
             (Just a) -> a
-            Nothing -> [] 
-    in 
-        nubBy dup $! sort (titulo:otherVals)
+            Nothing -> []
+    in
+        sort (titulo:otherVals)
 
 convertToSrc :: T.Text -> SourceDer
-convertToSrc name 
-    | nameU `elem` ["BDRIP", "BRRIP", "BLURAY"] = BD 
+convertToSrc name
+    | nameU `elem` ["BDRIP", "BRRIP", "BLURAY"] = BD
     | nameU == "HDDVD" = HDDVD
     | nameU == "HDTV" = HDTV
     | nameU `elem` ["DVDRIP", "NTSC", "PAL"] = DVD
@@ -121,7 +161,7 @@ convertToSrc name
         nameU = T.toUpper name
 
 convertToCdc :: T.Text -> CodecDer
-convertToCdc name 
+convertToCdc name
     | nameU `elem` ["X264", "H264", "AVC"] = H264
     | nameU `elem` ["DIVX", "XVID"] = XVID
     | nameU == "VC-1" = VC1
