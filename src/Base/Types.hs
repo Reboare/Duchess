@@ -2,12 +2,10 @@
 {-# LANGUAGE TemplateHaskell   #-}
 module Base.Types where
 
-
 import           Control.Lens
+import           Control.Monad.Maybe
 import           Data.List
 import qualified Data.Text           as T
-import           Language.Haskell.TH
-import           Control.Monad.Maybe
 
 type Url = String
 type MaybeIO = MaybeT IO 

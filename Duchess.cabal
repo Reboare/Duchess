@@ -18,6 +18,6 @@ cabal-version:       >=1.8
 executable duchess
   main-is:              Main.hs 
   -- other-modules:       
-  build-depends:       base == 4.*,either, parsec == 3.1.*, text == 0.11.*, network, HTTP == 4000.2.*, bytestring == 0.10.*, zlib == 0.5.*, attoparsec == 0.10.4.0, filepath == 1.3.*, time == 1.*, template-haskell, split, aeson, lens, MaybeT
+  build-depends:       base == 4.*,either,directory, parsec == 3.1.*, text == 0.11.*, network, HTTP == 4000.2.*, bytestring == 0.10.*, zlib == 0.5.*, attoparsec == 0.10.4.0, filepath == 1.3.*, time == 1.*, template-haskell, split, aeson, lens, MaybeT
   hs-source-dirs:      src
   ghc-options:         -O -fforce-recomp -funbox-strict-fields 

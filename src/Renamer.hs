@@ -1,30 +1,60 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Renamer where
+module Renamer
+(
+    rename,
+    genRename
+)
+where
 
-import Base.Types
-import Control.Lens
-import qualified Data.Text as T
+import           Base.Types
+import           Control.Lens
+import qualified Data.Text         as T
+import           Identifiers.Infer
+import qualified System.Directory as D
+import System.FilePath
 
 
-rename :: String -> NMedia -> String
-rename (x:str) nMedia = case x of
+type FormatString = String
+
+{-
+%t title
+%y year
+%len runtime
+%irat imdbrating
+%id imdbid
+-}
+rename :: FormatString -> FilePath -> IO ()
+rename fmt path = D.renameFile path $! replaceBaseName path newName
+    where
+        newName = genRename fmt (takeBaseName path)
+
+
+--This is very basic at the moment.  Hope to include a full formatting language soon
+genRename :: FormatString -> String -> String
+genRename fmt str = genRename' fmt (view info$! infer str)
+
+genRename' :: FormatString -> NMedia -> String
+genRename' (x:str) nMedia = case x of
     '%' -> case take 1 str of
-        "y" -> rYear ++ (rename (drop 1 str) nMedia)
-        "t" -> rTitle ++ (rename (drop 1 str) nMedia)
+        "y" -> rYear ++ (genRename' (drop 1 str) nMedia)
+        "t" -> rTitle ++ (genRename' (drop 1 str) nMedia)
         "l" -> case take 3 str of
-            "len" -> rLen ++ (rename (drop 3 str) nMedia)
-            _ -> rename str nMedia
+            "len" -> rLen ++ (genRename' (drop 3 str) nMedia)
+            _ -> x: genRename' str nMedia
         "i" -> case take 2 str of
-            "id" -> rId ++ (rename (drop 2 str) nMedia)
+            "id" -> rId ++ (genRename' (drop 2 str) nMedia)
             "ir" -> case take 4 str of
-                "irat" -> rIrat ++ (rename (drop 4 str) nMedia)
-                _ -> rename str nMedia
+                "irat" -> rIrat ++ (genRename' (drop 4 str) nMedia)
+                _ -> x : genRename' str nMedia
+    _ -> x : genRename' str nMedia
     where 
         rTitle = T.unpack $!view title nMedia
-        rYear = show $! view year nMedia
-        rLen = show $! view runtime nMedia
-        rIrat = show $! view imdbrating nMedia
-        rId = show $! view imdbid nMedia
-rename [] _ = []
+        rYear = unpackJust $! view year nMedia
+        rLen = unpackJust $! view runtime nMedia
+        rIrat = unpackJust $! view imdbrating nMedia
+        rId = unpackJust $! view imdbid nMedia
+        unpackJust (Just a) = show a
+        unpackJust Nothing = ""
+genRename' [] _ = []
 
 

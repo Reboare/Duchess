@@ -20,7 +20,7 @@ import           Identifiers.Infer.LegacyMove
 infer :: FilePath -> MediaFile
 -- |Constructor for a Media Type from a filename
 infer filepath =
-    convertBetween (Movie attrs) filepath
+    convertBetween attrs filepath
     where
         filename :: T.Text
         filename = T.pack $! filepath
@@ -44,7 +44,7 @@ isEpisode xs =
 main = 
     print $!  infer "Grandma's Boy"
 
-convertBetween :: Media -> String -> MediaFile
+convertBetween :: [MediaType] -> String -> MediaFile
 convertBetween attrs filepath =
     MediaFile
         filepath 
