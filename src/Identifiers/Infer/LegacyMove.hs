@@ -48,7 +48,7 @@ runtime' (x:xs) =  case x of
     _ -> part' xs
 runtime' [] = Nothing
 
-imdbID' :: [MediaType] -> Maybe Int
+imdbID' :: [MediaType] -> Maybe String
 imdbID' (x:xs) = case x of
     (IMDBid a) -> Just a
     _ -> imdbID' xs

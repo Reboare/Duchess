@@ -33,16 +33,7 @@ infer filepath =
 --Note: Support for multi-part mkv's might be supported
 --MIGHT BE!
 
-isEpisode :: [MediaType] -> Bool
-isEpisode xs =
-    any eqEpType $! xs
-    where
-        eqEpType (SeasonNo a) = True
-        eqEpType (EpisodeNo a) = True
-        eqEpType _ = False
 
-main = 
-    print $!  infer "Grandma's Boy"
 
 convertBetween :: [MediaType] -> String -> MediaFile
 convertBetween attrs filepath =

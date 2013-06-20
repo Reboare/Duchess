@@ -9,19 +9,13 @@ import           Control.Monad
 import           Data.Attoparsec.Text
 import qualified Data.Text            as T
 import           Data.Time.Clock
-import           Identifiers.Infer
-import           Renamer
+import           Identifiers
 import           System.FilePath
 
-myfmt = "%t (%y)"
 
-main =do
-    a <- getCurrentTime
-    let c = map (genRename myfmt) abso
-    print c
-    b <- getCurrentTime
-    let time = diffUTCTime b a
-    print time
+main = print =<< (sequence.(map inferIMDB))  abso
+
+
 
 abso = ["Eternal.Sunshine.of.the.Spotless.Mind.2004.720p.BluRay.DTS.x264-CtrlHD",
         "From.Dusk.Till.Dawn.1996.MKV.x264",

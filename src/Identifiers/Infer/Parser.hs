@@ -25,7 +25,7 @@ data MediaType =  Title T.Text
                 | Codec CodecDer
                 | Part Int
                 | Runtime Int
-                | IMDBid Int
+                | IMDBid String
                 | IMDBRating Float
                 | Synopsis T.Text
                 | Actors [Actor]

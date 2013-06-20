@@ -10,7 +10,6 @@ import qualified Data.Text           as T
 type Url = String
 type MaybeIO = MaybeT IO 
 
-
 data MediaFile = MediaFile {
     _filePath   :: String,
     _info       :: NMedia,
@@ -24,7 +23,7 @@ data NMedia = NMedia {
     _title      :: T.Text,
     _year       :: Maybe Int,
     _runtime    :: Maybe Int,
-    _imdbid     :: Maybe Int,
+    _imdbid     :: Maybe String,
     _imdbrating :: Maybe Float,
     _synopsis   :: Maybe T.Text,
     _actors     :: Maybe [Actor],
@@ -33,12 +32,8 @@ data NMedia = NMedia {
     _poster     :: Maybe (Either Url FilePath)
 }   deriving (Eq, Show, Ord)
 
-
-
 data Actor = Actor T.Text
             deriving (Show, Eq, Ord)
-
-
 
 data SourceDer = DVD | BD | HDDVD | VHS | WEBDL | HDTV | PRE
                 deriving (Eq, Show, Ord)
@@ -52,7 +47,6 @@ data ResolutionDer = ResolutionDer Int Signal
 instance Show ResolutionDer where
     show (ResolutionDer x s) = show x ++ show s
 
-
 data Signal = Progressive | Interlaced
             deriving (Eq, Ord)
 
@@ -63,7 +57,6 @@ instance Show Signal where
 strToSignal :: Char -> Signal
 strToSignal 'i' = Interlaced
 strToSignal 'p' = Progressive
-
 
 $(makeLenses ''NMedia)
 $(makeLenses ''MediaFile)
