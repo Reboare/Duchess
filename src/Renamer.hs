@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Renamer
-(
-    rename,
-    genRename
-)
+
 where
 
 import           Base.Types
 import           Control.Lens
-import qualified Data.Text         as T
-import           Identifiers.Infer
-import qualified System.Directory as D
-import System.FilePath
-
+import           Data.Attoparsec.Combinator
+import qualified Data.Attoparsec.Text       as AT
+import qualified Data.Text                  as T
+import qualified System.Directory           as D
+import           System.FilePath
+import           Renamer.TitleFormat
+import           Identifiers
+import           Control.Monad
 
 type FormatString = String
 
@@ -23,38 +23,17 @@ type FormatString = String
 %irat imdbrating
 %id imdbid
 -}
+baseMedia :: NMedia
+baseMedia = NMedia "Grandma's Boy" (Just 2006) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+baseFile :: MediaFile
+baseFile = MediaFile "" baseMedia Nothing Nothing Nothing Nothing
+
+
 rename :: FormatString -> FilePath -> IO ()
-rename fmt path = D.renameFile path $! replaceBaseName path newName
-    where
-        newName = genRename fmt (takeBaseName path)
+rename fmt path = undefined
 
+httpGenRename :: FormatString -> String -> IO T.Text
+httpGenRename fmt name = liftM (genRenamer' (T.pack fmt)) $! inferIMDB name
 
---This is very basic at the moment.  Hope to include a full formatting language soon
-genRename :: FormatString -> String -> String
-genRename fmt str = genRename' fmt (view info$! infer str)
-
-genRename' :: FormatString -> NMedia -> String
-genRename' (x:str) nMedia = case x of
-    '%' -> case take 1 str of
-        "y" -> rYear ++ (genRename' (drop 1 str) nMedia)
-        "t" -> rTitle ++ (genRename' (drop 1 str) nMedia)
-        "l" -> case take 3 str of
-            "len" -> rLen ++ (genRename' (drop 3 str) nMedia)
-            _ -> x: genRename' str nMedia
-        "i" -> case take 2 str of
-            "id" -> rId ++ (genRename' (drop 2 str) nMedia)
-            "ir" -> case take 4 str of
-                "irat" -> rIrat ++ (genRename' (drop 4 str) nMedia)
-                _ -> x : genRename' str nMedia
-    _ -> x : genRename' str nMedia
-    where 
-        rTitle = T.unpack $!view title nMedia
-        rYear = unpackJust $! view year nMedia
-        rLen = unpackJust $! view runtime nMedia
-        rIrat = unpackJust $! view imdbrating nMedia
-        rId = unpackJust $! view imdbid nMedia
-        unpackJust (Just a) = show a
-        unpackJust Nothing = ""
-genRename' [] _ = []
-
+main = print =<< httpGenRename "$title [($year)]" "stoker.2013.720p.web-dl.h264-publichd"
 
