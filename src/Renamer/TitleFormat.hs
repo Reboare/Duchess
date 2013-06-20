@@ -14,15 +14,18 @@ import Debug.Trace
 import Control.Monad
 import Control.Applicative
 
+-- |The three data types mean, throwaway, keep and filler which is dependent on the environment
 data CheckCall = LeftC T.Text | RightC T.Text | FillerC T.Text deriving (Eq, Show)
 data Renamer = Renamer String deriving (Eq, Show)
 
 baseMedia :: NMedia
+-- |Filler to test these funcs
 baseMedia = NMedia "Grandma's Boy" (Just 2006) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 baseFile :: MediaFile
 baseFile = MediaFile "" baseMedia Nothing Nothing Nothing Nothing
 
 genRenamer' :: T.Text -> MediaFile -> T.Text
+-- |Just generates the output string
 genRenamer' fmt medf = case (AT.maybeResult cCallList ) of
     (Just a) -> T.strip.T.concat $! dropleft a
     Nothing -> T.pack (view filePath medf)
@@ -40,6 +43,7 @@ dropleft (x:xs) = case x of
 dropleft [] = [] 
 
 fenclosure :: MediaFile -> AT.Parser CheckCall
+-- |Tests [] as conditional enclosures.  Currently [] are disallowed characters
 fenclosure mfile = do
 -- |If no data enclosed within this returns true then through anything inside away
     AT.string "["
